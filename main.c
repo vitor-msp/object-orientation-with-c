@@ -33,6 +33,7 @@ Cart cartConstructor(void)
 typedef struct vip_cart_t
 {
     Cart super;
+    void (*sumValues)(void *);
     float discount;
     void (*applyDiscount)(void *);
 } VipCart;
@@ -49,6 +50,28 @@ VipCart vipCartConstructor()
 {
     VipCart vipCart;
     vipCart.super = cartConstructor();
+    vipCart.sumValues = &sumValues;
+    vipCart.discount = 0;
+    vipCart.applyDiscount = &applyDiscount;
+    return vipCart;
+}
+
+void polymorphicSumValues(void *this)
+{
+    // add one more unit per product
+    float tmpSum = 0;
+    for (int i = 0; i < MAX_PRODUCTS; i++)
+    {
+        tmpSum += ((Cart *)this)->products[i] + 1;
+    }
+    ((Cart *)this)->totalValue = tmpSum;
+}
+
+VipCart polymorphicVipCartConstructor()
+{
+    VipCart vipCart;
+    vipCart.super = cartConstructor();
+    vipCart.sumValues = &polymorphicSumValues;
     vipCart.discount = 0;
     vipCart.applyDiscount = &applyDiscount;
     return vipCart;
@@ -65,8 +88,16 @@ void main()
     VipCart vipCart = vipCartConstructor();
     vipCart.super.products[0] = 10;
     vipCart.super.products[1] = 40;
-    vipCart.super.sumValues(&vipCart);
+    vipCart.sumValues(&vipCart);
     vipCart.discount = 0.2;
     vipCart.applyDiscount(&vipCart);
     printf("vip cart - total value: %f\n", vipCart.super.totalValue);
+
+    VipCart polyVipCart = polymorphicVipCartConstructor();
+    polyVipCart.super.products[0] = 10;
+    polyVipCart.super.products[1] = 40;
+    polyVipCart.sumValues(&polyVipCart);
+    polyVipCart.discount = 0.5;
+    polyVipCart.applyDiscount(&polyVipCart);
+    printf("poly vip cart - total value: %f\n", polyVipCart.super.totalValue);
 }
