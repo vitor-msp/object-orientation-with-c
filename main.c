@@ -53,9 +53,8 @@ struct ILogger
 typedef struct vip_cart_t
 {
     Cart super;
-    void (*sumValues)(void *);
+    void (*sumValues)(void *, struct ILogger);
     float discount;
-    void (*applyDiscount)(void *, struct ILogger);
 } VipCart;
 
 void applyDiscount(void *this, struct ILogger logger)
@@ -68,13 +67,24 @@ void applyDiscount(void *this, struct ILogger logger)
     logger.log(logMessage, discount);
 }
 
+void executeApplyDiscount(void *this, struct ILogger logger)
+{
+    // validation by stack
+    applyDiscount(this, logger);
+}
+
+void sumValuesWithDiscount(void *this, struct ILogger logger)
+{
+    sumValues(this);
+    executeApplyDiscount(this, logger);
+}
+
 VipCart vipCartConstructor()
 {
     VipCart vipCart;
     vipCart.super = cartConstructor();
-    vipCart.sumValues = &sumValues;
+    vipCart.sumValues = &sumValuesWithDiscount;
     vipCart.discount = 0;
-    vipCart.applyDiscount = &applyDiscount;
     return vipCart;
 }
 
@@ -95,7 +105,6 @@ VipCart polymorphicVipCartConstructor()
     vipCart.super = cartConstructor();
     vipCart.sumValues = &polymorphicSumValues;
     vipCart.discount = 0;
-    vipCart.applyDiscount = &applyDiscount;
     return vipCart;
 }
 
@@ -135,9 +144,8 @@ void main()
     VipCart vipCart = vipCartConstructor();
     vipCart.super.products[0] = 10;
     vipCart.super.products[1] = 40;
-    vipCart.sumValues(&vipCart);
     vipCart.discount = 0.2;
-    vipCart.applyDiscount(&vipCart, logger1);
+    vipCart.sumValues(&vipCart, logger1);
     printf("vip cart - total value: %f\n", vipCart.super.getTotalValue());
 
     // struct ILogger logger2 = loggerConstructor2();
